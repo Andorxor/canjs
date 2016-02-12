@@ -903,22 +903,32 @@ steal("can/view/bindings", "can/map", "can/test", "can/component", "can/view/sta
 		var frag = can.view.stache("<div {{#if flag}}can-click='foo'{{/if}}>Click</div>")({
 			flag: flag,
 			foo: function () {
+				console.log("foo handler");
 				clickHandlerCount++;
 			}
 		});
-		var trig = function(){
+		var trig = function () {
 			var div = can.$('#qunit-fixture')[0].getElementsByTagName('div')[0];
 			can.trigger(div, {
 				type: "click"
 			});
 		};
 		can.append(can.$('#qunit-fixture'), frag);
-		trig();
-		flag(false);
-		trig();
-		flag(true);
-		trig();
-		equal(clickHandlerCount, 2, "click handler called twice");
+
+		// Attribute mutation observers are called asyncronously,
+		// so give some time for the mutation handlers.
+		stop();
+		var numTrigs = 3;
+		var testTimer = setInterval(function () {
+			if (numTrigs--) {
+				trig();
+				flag( !flag() );
+			} else {
+				clearTimeout(testTimer);
+				equal(clickHandlerCount, 2, "click handler called twice");
+				start();
+			}
+		}, 10);
 	});
 
 	test("can-value compute rejects new value (#887)", function() {
